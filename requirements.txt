@@ -1,1 +1,2 @@
-arcpy=3.1
+arcpy==3.1
+gpxpy==1.6.2

@@ -598,28 +598,28 @@ par_minSpacingBetweenPoints=50
 # Local variables:
 
 #Inputs
-distBoundaries = "/Input/moz_adm_20190607_shp/moz_admbnda_adm2_ine_20190607.shp"
+distBoundaries = "Input/moz_adm_20190607_shp/moz_admbnda_adm2_ine_20190607.shp"
 distBoundariesUpdated = "Output/createRouteDistrict/network/distBoundariesUpdated.shp"
-startPoints_survey = "/Input/startPoints_survey.shp"
-LCCkpts = "C:/Users/Idelson Mindo/Documents/GitHub/routes_RTMOZ/Input/pointsForLCCkpts_4thRound.shp"
+startPoints_survey = "Input/startPoints_survey.shp"
+LCCkpts = "Input/pointsForLCCkpts_4thRound.shp"
 
 TandCRoads = "Input/TandCRoads.shp"
 #TandCRoads = "/Imput/TandCRoads_exclChinde.shp" #the file is not available in the folder 
 
-Breaks = "C:/Users/Idelson Mindo/Documents/GitHub/routes_RTMOZ/Input/testBreak.csv"
-roads_in_nampula_and_zambezia = "/Imput/roads_in_nampula_and_zambezia_exclMemba.shp"
-allInfo_crossingLevel = "C:/Users/Idelson Mindo/Documents/GitHub/routes_RTMOZ/Input/allInfo_crossingLevel.shp"
+Breaks = "Input/testBreak.csv"
+roads_in_nampula_and_zambezia = "Imput/roads_in_nampula_and_zambezia_exclMemba.shp"
+allInfo_crossingLevel = "Input/allInfo_crossingLevel.shp"
 
 
 #Outputs
-roadsNetwork_shp = "/Output/createRouteDistrict/network/roadsNetwork.shp"
-roadsNetworkDissolve_shp = "/Output/createRouteDistrict/network/roadsNetworkDissolve.shp"
-roadsNetworkParts_shp = "/Output/createRouteDistrict/network/roadsNetworkParts.shp"
+roadsNetwork_shp = "Output/createRouteDistrict/network/roadsNetwork.shp"
+roadsNetworkDissolve_shp = "Output/createRouteDistrict/network/roadsNetworkDissolve.shp"
+roadsNetworkParts_shp = "Output/createRouteDistrict/network/roadsNetworkParts.shp"
 #network = "/Output/createRouteDistrict/network/roadsNetwork_ND.nd"
-network = "C:/Users/Idelson Mindo/Documents/GitHub/routes_RTMOZ/Output/createRouteDistrict/network/network.gdb/roadsNetwork/roads_NetD/roads_NetD.nd"
-roadIntersectionsAndEndPoints="/Output/createRouteDistrict/network/roadIntersectionsAndEndPoints.shp"
-roadsNetworkPartsCentroids="C:/Users/Idelson Mindo/Documents/GitHub/routes_RTMOZ/Output/createRouteDistrict/network/roadsNetworkPartsCentroids.shp"
-allInterceptPoints="C:/Users/Idelson Mindo/Documents/GitHub/routes_RTMOZ/Output/createRouteDistrict/network/allInterceptPoints.shp"
+network = "Output/createRouteDistrict/network/network.gdb/roadsNetwork/roads_NetD/roads_NetD.nd"
+roadIntersectionsAndEndPoints="Output/createRouteDistrict/network/roadIntersectionsAndEndPoints.shp"
+roadsNetworkPartsCentroids="Output/createRouteDistrict/network/roadsNetworkPartsCentroids.shp"
+allInterceptPoints="Output/createRouteDistrict/network/allInterceptPoints.shp"
 
 path="Temporary/WorkingWithRoutes4thRound.gdb"
 
@@ -692,7 +692,7 @@ try:  # first solve transfer routes (manually defined for transferring from base
         pass
         print("could not delete name field")
 
-    Routes = "C:/Users/Idelson Mindo/Documents/GitHub/routes_RTMOZ/RouteImputs/transferRoutes{}.csv".format(dist)
+    Routes = "RouteImputs/transferRoutes{}.csv".format(dist)
     print("Routes", Routes)
     Orders = "{}/orders_{}".format(path, dist)
     nameAdd1 = "T"

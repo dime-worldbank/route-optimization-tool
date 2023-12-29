@@ -24,21 +24,28 @@ import arcpy, os, shutil, arceditor, subprocess, time, random, glob, csv
 arcpy.CheckOutExtension("Network")
 arcpy.CheckOutExtension("Spatial")
 from arcpy.sa import *
+
+# Set the working directory to the directory containing the script
+script_directory = os.path.dirname(os.path.abspath(__file__))
+os.chdir(script_directory)
+
+
 ##from functions import *
-arcpy.ImportToolbox("C:/Users/Idelson Mindo/Desktop/CreateRoutesPerDistrict_Idelson/Toolboxes/Features_to_GPX/FeaturesToGPX.tbx")
-arcpy.gp.toolbox = "C:/Users/Idelson Mindo/Desktop/CreateRoutesPerDistrict_Idelson/Toolboxes/Features_to_GPX/FeaturesToGPX.tbx";
-arcpy.ImportToolbox("C:/Users/Idelson Mindo/Desktop/CreateRoutesPerDistrict_Idelson/Toolboxes/SpatialJoinLargestOverlap/SpatialJoinLargestOverlap.tbx")
-arcpy.gp.toolbox = "C:/Users/Idelson Mindo/Desktop/CreateRoutesPerDistrict_Idelson/Toolboxes/SpatialJoinLargestOverlap/SpatialJoinLargestOverlap.tbx"
+arcpy.ImportToolbox("../toolboxes/FeaturesToGPX.tbx")
+arcpy.gp.toolbox = "../toolboxes/FeaturesToGPX.tbx";
+arcpy.ImportToolbox("../toolboxes/SpatialJoinLargestOverlap.tbx")
+arcpy.gp.toolbox = "../toolboxes/SpatialJoinLargestOverlap.tbx"
 ### Set environment ###
 # Allow the overwriting of the output files
 arcpy.env.overwriteOutput = True # This command is CASE-SENSITIVE
 arcpy.env.outputMFlag = "Disabled"
 arcpy.env.outputZFlag = "Disabled"
 arcpy.env.parallelProcessingFactor = "100%"
-work_dir = os.path.dirname(os.path.realpath(__file__))
-os.chdir(os.path.dirname(os.getcwd()))
-arcpy.env.scratchWorkspace = 'C:/Users/Idelson Mindo/Documents/GitHub/routes_RTMOZ/scratch'
-Scratch='C:/Users/Idelson Mindo/Documents/GitHub/routes_RTMOZ/scratch'
+
+#work_dir = os.path.dirname(os.path.realpath(__file__))
+#os.chdir(os.path.dirname(os.getcwd()))
+arcpy.env.scratchWorkspace = '/scratch'
+Scratch='/scratch'
 
 print(os.getcwd())
 
@@ -62,32 +69,34 @@ par_timeAtHalfway=3
 # Inputs #
 ##########
 # roads and districts
-distBoundaries = "C:/Users/Idelson Mindo/Documents/GitHub/routes_RTMOZ/Input/moz_adm_20190607_shp/moz_admbnda_adm2_ine_20190607.shp"
-roads_in_nampula_and_zambezia = "C:/Users/Idelson Mindo/Documents/GitHub/routes_RTMOZ/Input/roads_in_nampula_and_zambezia_exclMemba.shp"
-startPoints_survey = "C:/Users/Idelson Mindo/Documents/GitHub/routes_RTMOZ/Input/startPoints_survey.shp"
+distBoundaries = "Input/moz_adm_20190607_shp/moz_admbnda_adm2_ine_20190607.shp"
+roads_in_nampula_and_zambezia = "Input/roads_in_nampula_and_zambezia_exclMemba.shp"
+startPoints_survey = "Input/startPoints_survey.shp"
 
 # points of interest
-LCCkpts = "C:/Users/Idelson Mindo/Documents/GitHub/routes_RTMOZ/Imput/pointsForLCCkpts_4thRound.shp"
-mktsFor2ndRound = "C:/Users/Idelson Mindo/Documents/GitHub/routes_RTMOZ/Input/marketsCleanedFor2ndRound.shp"
-feirasFor2ndRound = "C:/Users/Idelson Mindo/Documents/GitHub/routes_RTMOZ/Input/feirasCleanedFor4thRound.shp"
-allInfo_crossingLevel ="C:/Users/Idelson Mindo/Documents/GitHub/routes_RTMOZ/Input/allInfo_crossingLevel.shp"
-TandCRoads = "Input\TandCRoads.shp"
+LCCkpts = "Input/pointsForLCCkpts_4thRound.shp"
+mktsFor2ndRound = "Input/marketsCleanedFor2ndRound.shp"
+feirasFor2ndRound = "Input/feirasCleanedFor4thRound.shp"
+allInfo_crossingLevel ="Input/allInfo_crossingLevel.shp"
+TandCRoads = "Input/TandCRoads.shp"
 #for route solver
-Routes = "C:/Users/Idelson Mindo/Documents/GitHub/routes_RTMOZ/Imput/testRoute.csv"
-Breaks = "C:/Users/Idelson Mindo/Documents/GitHub/routes_RTMOZ/Imput/testBreak.csv"
+Routes = "Input/testRoute.csv"
+Breaks = "Input/testBreak.csv"
 
 ###########
 # Outputs #
 ###########
-roadsNetwork_shp = "C:/Users/Idelson Mindo/Documents/GitHub/routes_RTMOZ/Output/createRouteDistrict/network/roadsNetwork.shp"
-roadsNetworkDissolve_shp = "C:/Users/Idelson Mindo/Documents/GitHub/routes_RTMOZ/Output/createRouteDistrict/network/roadsNetworkDissolve.shp"
-roadsNetworkParts_shp = "C:/Users/Idelson Mindo/Documents/GitHub/routes_RTMOZ/Output/createRouteDistrict/network/roadsNetworkParts.shp"
-#network = "C:/Users/Idelson Mindo/Documents/GitHub/routes_RTMOZ/Output/createRouteDistrict/network/roadsNetwork_ND.nd"
-network = "C:/Users/Idelson Mindo/Documents/GitHub/routes_RTMOZ/Output/createRouteDistrict/network/network.gdb/roadsNetwork/roadsNetwork_ND"
-roadIntersectionsAndEndPoints="C:/Users/Idelson Mindo/Documents/GitHub/routes_RTMOZ/Output/createRouteDistrict/network/roadIntersectionsAndEndPoints.shp"
-roadsNetworkPartsCentroids="C:/Users/Idelson Mindo/Documents/GitHub/routes_RTMOZ/Output/createRouteDistrict/network/roadsNetworkPartsCentroids.shp"
-allInterceptPoints="C:/Users/Idelson Mindo/Documents/GitHub/routes_RTMOZ/Output/createRouteDistrict/network/allInterceptPoints.shp"
-distBoundariesUpdated = "C:/Users/Idelson Mindo/Documents/GitHub/routes_RTMOZ/Output/createRouteDistrict/network/distBoundariesUpdated.shp"
+roadsNetwork_shp = "Output/createRouteDistrict/network/roadsNetwork.shp"
+roadsNetworkDissolve_shp = "Output/createRouteDistrict/network/roadsNetworkDissolve.shp"
+#roadsNetworkParts_shp = "Output/createRouteDistrict/network/roadsNetworkParts.shp"
+
+roadsNetworkParts_shp = os.path.join(os.path.dirname(__file__), "..", "Output", "createRouteDistrict", "network", "roadsNetworkParts.shp")
+
+network = "Output/createRouteDistrict/network/network.gdb/roadsNetwork/roadsNetwork_ND"
+roadIntersectionsAndEndPoints="Output/createRouteDistrict/network/roadIntersectionsAndEndPoints.shp"
+roadsNetworkPartsCentroids="Output/createRouteDistrict/network/roadsNetworkPartsCentroids.shp"
+allInterceptPoints="Output/createRouteDistrict/network/allInterceptPoints.shp"
+distBoundariesUpdated = "Output/createRouteDistrict/network/distBoundariesUpdated.shp"
 
 try:
     try:

@@ -7,13 +7,18 @@ import shutil
 import re
 
 # Set up the paths and environments
-working_directory = r'C:\Users\Idelson Mindo\Documents\GitHub\routes_RTMOZ\Atlasses'
+script_directory = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+os.chdir(script_directory)
+
+working_directory = os.path.abspath(os.path.join(script_directory, "Atlasses"))
+
+
 mainpath = "OutputVRP"
 mxd_path = "AtlasLuabo_upd2023.mxd"
 arcpy.env.overwriteOutput = True
 
 # Navigate to the parent directory and then open the "Atlasses" folder
-atlasses_directory = os.path.join(os.path.dirname(working_directory), "Atlasses")
+atlasses_directory = os.path.join(os.path.dirname(working_directory),"Atlasses")
 
 # Create a PDF merger
 merger = PdfFileMerger()

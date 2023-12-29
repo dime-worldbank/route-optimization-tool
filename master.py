@@ -20,20 +20,20 @@ districts = {
 }
 
 # CREATE ROUTES PER DISTRICT - PREPARATION
-os.system("python 02_Prep_CreateRoutesPerDistrict.py")
+#os.system("python 02_Prep_CreateRoutesPerDistrict.py")
 
-# CREATE ROUTES PER DISTRICT - MAIN
-for district_number, district_name in districts.items():
-    print(f"Start District {district_number}: {district_name}")
-    os.system(f"python 03_PerDist_CreateRoutesPerDistrict.py {district_number}")
+#CREATE ROUTES PER DISTRICT - MAIN
+#for district_number, district_name in districts.items():
+    #print(f"Start District {district_number}: {district_name}")
+    #os.system(f"python 03_PerDist_CreateRoutesPerDistrict.py {district_number}")
 
 # MAKE ATLAS
 os.system("python 04_MakeAtlas.py")
 
 # COPY Atlas TO folder
-for district_number, district_name in districts.items():
-    dest_dir = os.path.expanduser(f"instrucoesEtapa_{district_name}.pdf")
-    shutil.copy(f'all_{district_name}.pdf', dest_dir)
+#for district_number, district_name in districts.items():
+    #dest_dir = os.path.expanduser(f"instrucoesEtapa_{district_name}.pdf")
+    #shutil.copy(f'all_{district_name}.pdf', dest_dir)
 
 # Copy Tracks
-os.system("python 05_transferToPackage.py")
+#os.system("python 05_transferToPackage.py")
