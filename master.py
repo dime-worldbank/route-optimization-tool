@@ -23,12 +23,12 @@ districts = {
 #os.system("python 02_Prep_CreateRoutesPerDistrict.py")
 
 #CREATE ROUTES PER DISTRICT - MAIN
-#for district_number, district_name in districts.items():
-    #print(f"Start District {district_number}: {district_name}")
-    #os.system(f"python 03_PerDist_CreateRoutesPerDistrict.py {district_number}")
+for district_number, district_name in districts.items():
+    print(f"Start District {district_number}: {district_name}")
+    os.system(f"python 03_PerDist_CreateRoutesPerDistrict.py {district_number}")
 
 # MAKE ATLAS
-os.system("python 04_MakeAtlas.py")
+#os.system("python 04_MakeAtlas.py")
 
 # COPY Atlas TO folder
 #for district_number, district_name in districts.items():

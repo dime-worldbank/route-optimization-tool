@@ -1,29 +1,41 @@
 import arcpy
 from arcpy.mp import ArcGISProject
 from PyPDF2 import PdfFileMerger, PdfFileReader
-from datetime import date
-import os
 import shutil
 import re
+import os
+from datetime import date
 
-# Set up the paths and environments
+# Set the working directory to the directory containing the script
 script_directory = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 os.chdir(script_directory)
 
 working_directory = os.path.abspath(os.path.join(script_directory, "Atlasses"))
 
-
-mainpath = "OutputVRP"
-mxd_path = "AtlasLuabo_upd2023.mxd"
+arcpy.ImportToolbox("toolboxes/FeaturesToGPX.tbx")
+arcpy.gp.toolbox = "toolboxes/FeaturesToGPX.tbx"
+arcpy.ImportToolbox("toolboxes/SpatialJoinLargestOverlap.tbx")
+arcpy.gp.toolbox = "toolboxes/SpatialJoinLargestOverlap.tbx"
 arcpy.env.overwriteOutput = True
 
-# Navigate to the parent directory and then open the "Atlasses" folder
-atlasses_directory = os.path.join(os.path.dirname(working_directory),"Atlasses")
+duration = 1000  # milliseconds
+freq = 440  # Hz
 
-# Create a PDF merger
+arcpy.CheckOutExtension("Network")
+arcpy.CheckOutExtension("Spatial")
+
 merger = PdfFileMerger()
+mainpath = os.path.join(os.path.dirname(working_directory), "OutputVRP")
+mxdPath = os.path.join(os.path.dirname(mainpath), "Atlasses", "projectMap.aprx")
+mxd = arcpy.mp.ArcGISProject(mxdPath)
 
-# Define districts
+dataFrame = (mxdPath, "COUNTIES")[0]
+
+df = mxd.listMaps("Layers")[0]
+
+sourceLayerRoads = arcpy.mp.LayerFile("Atlasses/Stage_example.lyr")
+sourceLayerOrders = arcpy.mp.LayerFile("Atlasses/Orders_Example.lyr")
+
 districts = {
     "1": "ChindeLuabo",
     "2": "Mocubela",
@@ -36,130 +48,202 @@ districts = {
     "9": "Monapo",
     "10": "Mossuril",
     "11": "Mogincual",
+    "97": "Gurue",
     "98": "aroundNampula"
 }
 
-# Function to create a district folder and GDB
-def create_district_folder_and_gdb(dist):
-    folder_path = os.path.join(atlasses_directory, dist)
-    if not os.path.exists(folder_path):
-        os.mkdir(folder_path)
-    print(f"Created folder for {dist}")
+for dists in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 98]:
+    dist = districts["{}".format(dists)]
+    try:
+        shutil.rmtree(os.path.join("Atlasses", dist))
+    except:
+        print("Folder  {} could not be deleted".format(dist))
+        pass
+
+    os.mkdir(os.path.join("Atlasses", dist))
+    print(dist)
 
     try:
-        arcpy.Delete_management(os.path.join(folder_path, f"WorkingGDB{dist}.gdb"))
+        arcpy.Delete_management("Atlasses\\WorkingGDB{}.gdb".format(dist))
     except:
         pass
 
-    # Process: Create File GDB
-    arcpy.CreateFileGDB_management(folder_path, f"WorkingGDB{dist}")
-    print(f"Created GDB for {dist}")
+    arcpy.CreateFileGDB_management("Atlasses", "WorkingGDB{}".format(dist))
+    for bb in ["Troco", ""]:
+        for b in range(1, 5):
+            for d in range(1, 27):
+                try:
+                    for f in os.listdir(os.path.join(mainpath, dist, "Base{}{}".format(bb, b), "Day{}".format(d))):
+                        pattern = "RoutesMerged_Dist{}_Base(.*?)_Day{}.shp".format(dist, d)
+                        substring = re.search(pattern, f)
+                        if substring:
+                            baseName = substring.group(1)
+                            print("baseName:", baseName)
 
-# Iterate through districts
-for dists in range(1, 12):
-    dist = districts.get(str(dists))
-    if dist:
-        create_district_folder_and_gdb(dist)
+                    cursor = arcpy.da.SearchCursor(os.path.join(mainpath, dist, "Base{}{}".format(bb, b),
+                                                                "Day{}".format(d),
+                                                                "RoutesMerged_Dist{}_Base{}_Day{}.shp".format(dist,
+                                                                                                              baseName,
+                                                                                                              d)),
+                                                   "Stage")
+                    Stages = []
+                    for row in cursor:
+                        Stages.append(row[0])
+                    print("Stages:", Stages)
+                    maxStage = max(Stages)
+                    print("max:", maxStage)
 
-        for bb in ["Troco", ""]:
-            for b in range(1, 5):
-                for d in range(1, 27):
-                    try:
-                        pdf_name = f"Dist{dist}_Base{bb}{b}_Day{d}.pdf"
-                        pdf_path = os.path.join(atlasses_directory, dist, pdf_name)
+                    arcpy.CalculateField_management(
+                        os.path.join(mainpath, dist, "Base{}{}".format(bb, b), "Day{}".format(d),
+                                     "RoutesMerged_Dist{}_Base{}_Day{}.shp".format(dist, baseName, d)),
+                        "Base", maxStage, "PYTHON_9.3", "")
 
-                        # Check if the PDF already exists
-                        if os.path.exists(pdf_path):
-                            print(f"Skipped existing PDF: {pdf_path}")
-                            continue
+                    arcpy.CopyFeatures_management(
+                        os.path.join(mainpath, dist, "Base{}{}".format(bb, b), "Day{}".format(d),
+                                     "RoutesMerged_Dist{}_Base{}_Day{}.shp".format(dist, baseName, d)),
+                        "Atlasses\\WorkingGDB{}.gdb\\route{}{}_{}".format(dist, bb, b, d), "", "0", "0", "0")
 
-                        for f in os.listdir(os.path.join(mainpath, dist, f"Base{bb}{b}", f"Day{d}")):
-                            pattern = "RoutesMerged_Dist{}_Base(.*?)_Day{}.shp".format(dist, d)
-                            substring = re.search(pattern, f)
-                            if substring:
-                                base_name = substring.group(1)
-                                print("Base name:", base_name)
+                    arcpy.AddGeometryAttributes_management(
+                        os.path.join(mainpath, dist, "Base{}{}".format(bb, b), "Day{}".format(d),
+                                     "RoutesMerged_Dist{}_Base{}_Day{}.shp".format(dist, baseName, d)),
+                        "LINE_START_MID_END;LENGTH_GEODESIC", "KILOMETERS", "", "")
 
-                                cursor = arcpy.da.SearchCursor(os.path.join(mainpath, dist, f"Base{bb}{b}", f"Day{d}", f"RoutesMerged_Dist{dist}_Base{base_name}_Day{d}.shp"), "Stage")
-                                stages = [row[0] for row in cursor]
-                                max_stage = max(stages)
-                                print("Max stage:", max_stage)
+                    arcpy.MakeXYEventLayer_management(
+                        os.path.join(mainpath, dist, "Base{}{}".format(bb, b), "Day{}".format(d),
+                                     "RoutesMerged_Dist{}_Base{}_Day{}.shp".format(dist, baseName, d)), "END_X",
+                        "END_Y",
+                        "PointLayer", "", "")
 
-                                arcpy.CalculateField_management(os.path.join(mainpath, dist, f"Base{bb}{b}", f"Day{d}", f"RoutesMerged_Dist{dist}_Base{base_name}_Day{d}.shp"), "Base", max_stage, "PYTHON_9.3", "")
-                                arcpy.CopyFeatures_management(os.path.join(mainpath, dist, f"Base{bb}{b}", f"Day{d}", f"RoutesMerged_Dist{dist}_Base{base_name}_Day{d}.shp"),
-                                                              os.path.join(atlasses_directory, dist, f"WorkingGDB{dist}.gdb", f"route{bb}{b}_{d}"))
+                    arcpy.CopyFeatures_management("PointLayer",
+                                                  os.path.join(mainpath, dist, "Base{}{}".format(bb, b),
+                                                               "Day{}".format(d),
+                                                               "OrdersPoints_Dist{}_Base{}_Day{}.shp".format(dist,
+                                                                                                             baseName,
+                                                                                                             d)),
+                                                  "", "0", "0", "0")
 
-                        # Check if the resulting shapefile has valid data
-                        if arcpy.management.GetCount(os.path.join(atlasses_directory, dist, f"WorkingGDB{dist}.gdb", f"route{bb}{b}_{d}")) == 0:
-                            print(f"No data for {pdf_name}")
-                            continue
+                    arcpy.Select_analysis(os.path.join(mainpath, dist, "Base{}{}".format(bb, b), "Day{}".format(d),
+                                                       "PointLayer"), "{}\\mktsCount.shp".format(mainpath),
+                                          " \"StgType\" =  'Market'")
+                    arcpy.Select_analysis(os.path.join(mainpath, dist, "Base{}{}".format(bb, b), "Day{}".format(d),
+                                                       "PointLayer"), "{}\\feiraCount.shp".format(mainpath),
+                                          " \"StgType\" =  'Feira'")
+                    arcpy.Select_analysis(os.path.join(mainpath, dist, "Base{}{}".format(bb, b), "Day{}".format(d),
+                                                       "PointLayer"), "{}\\crossCount.shp".format(mainpath),
+                                          " \"StgType\" =  'Crossing'")
+                    arcpy.Select_analysis(os.path.join(mainpath, dist, "Base{}{}".format(bb, b), "Day{}".format(d),
+                                                       "PointLayer"), "{}\\LCCkptCount.shp".format(mainpath),
+                                          " \"StgType\" =  'LCCkpt'")
 
-                        # Your existing code for creating the PDF here
+                    result = arcpy.GetCount_management("{}\\mktsCount.shp".format(mainpath))
+                    mkts = int(result.getOutput(0))
 
-                        print(f"Created PDF: {pdf_path}")
-                    except Exception as e:
-                        print(e)
-                        print(f"Error creating PDF for {pdf_name}: {e}")
-                        pass
+                    result = arcpy.GetCount_management("{}\\feiraCount.shp".format(mainpath))
+                    feiras = int(result.getOutput(0))
 
-# Loop for merging district PDFs
-merger_district = PdfFileMerger()
+                    result = arcpy.GetCount_management("{}\\crossCount.shp".format(mainpath))
+                    cross = int(result.getOutput(0))
 
-for filename in os.listdir(os.path.join(atlasses_directory, dist)):
-    if filename.lower().endswith('.pdf'):
-        pdf_path = os.path.join(atlasses_directory, dist, filename)
-        try:
-            # Check if the PDF has pages before appending
-            with open(pdf_path, 'rb') as source:
-                tmp = PdfFileReader(source)
-                if tmp.numPages > 0:
-                    merger_district.append(tmp)
-                    print(f"Appended content from {pdf_path}")
-                else:
-                    print(f"Skipped empty PDF: {pdf_path}")
-        except FileNotFoundError:
-            print(f"File not found: {pdf_path}")
-        except Exception as e:
-            print(f"Error appending PDF {pdf_path}: {e}")
+                    result = arcpy.GetCount_management("{}\\LCCkptCount.shp".format(mainpath))
+                    ckpts = int(result.getOutput(0))
 
-# Check if any PDFs were appended before writing
-if merger_district.pages:
-    try:
-        # Create the merged PDF in the working directory
-        merged_pdf_path = os.path.join(working_directory, f"all_{dist}.pdf")
-        merger_district.write(merged_pdf_path)
-        print(f"Merged PDF created: {merged_pdf_path}")
-    except Exception as e:
-        print(f"Error writing merged PDF: {e}")
-else:
-    print(f"No PDFs with content to merge for {dist}")
+                    result = arcpy.GetCount_management(
+                        os.path.join(mainpath, dist, "Base{}{}".format(bb, b), "Day{}".format(d), "PointLayer"))
+                    roads = int(result.getOutput(0))
 
-# Close the merger to release the file handles
-merger_district.close()
+                    total_length = 0.0
+                    with arcpy.da.SearchCursor(
+                            os.path.join(mainpath, dist, "Base{}{}".format(bb, b), "Day{}".format(d), "PointLayer"),
+                            ("LENGTH_GEO")) as cursor:
+                        for row in cursor:
+                            total_length += row[0]
 
-# Merge district PDFs
+                    newlayerRoads = arcpy.mapping.Layer(
+                        os.path.join(mainpath, dist, "Base{}{}".format(bb, b), "Day{}".format(d),
+                                     "RoutesMerged_Dist{}_Base{}_Day{}.shp".format(dist, baseName, d)))
+                    newlayerOrders = arcpy.mapping.Layer(
+                        os.path.join(mainpath, dist, "Base{}{}".format(bb, b), "Day{}".format(d),
+                                     "OrdersPoints_Dist{}_Base{}_Day{}.shp".format(dist, baseName, d)))
+                    arcpy.mapping.AddLayer(df, newlayerRoads, "TOP")
+                    arcpy.mapping.AddLayer(df, newlayerOrders, "TOP")
+
+                    updateLayerRoads = arcpy.mapping.ListLayers(mxd, "RoutesMerged_Dist{}_Base{}_Day{}".format(dist,
+                                                                                                              baseName,
+                                                                                                              d),
+                                                               df)[0]
+                    updateLayerOrders = arcpy.mapping.ListLayers(mxd, "OrdersPoints_Dist{}_Base{}_Day{}".format(dist,
+                                                                                                                baseName,
+                                                                                                                d),
+                                                                df)[0]
+
+                    arcpy.mapping.UpdateLayer(df, updateLayerRoads, sourceLayerRoads, symbology_only=False)
+
+                    updateLayerRoads.replaceDataSource("Atlasses\\WorkingGDB{}.gdb".format(dist),
+                                                       "FILEGDB_WORKSPACE", "route{}{}_{}".format(bb, b, d))
+
+                    for lblClass in updateLayerRoads.labelClasses:
+                        lblClass.expression = "(" + "[Stage]" + ")"
+                    updateLayerRoads.showLabels = True
+
+                    arcpy.mapping.UpdateLayer(df, updateLayerOrders, sourceLayerOrders, symbology_only=True)
+
+                    ext = updateLayerRoads.getExtent()
+                    df.extent = ext
+                    df.scale = df.scale * 1.1
+
+                    elm = arcpy.mapping.ListLayoutElements(mxd, "TEXT_ELEMENT", "MapTitle")[0]
+                    elm.text = "Distrito {}, Base {}, Dia {} ".format(dist, baseName, d)
+                    elm.fontSize = 25
+                    updateLayerRoads.name = "Rota de hoje"
+                    updateLayerOrders.name = "Tarefas de hoje"
+                    arcpy.RefreshActiveView()
+
+                    listLayers = arcpy.mapping.ListLayers(mxd)
+                    legend = arcpy.mapping.ListLayoutElements(mxd, "LEGEND_ELEMENT")[0]
+                    legend.removeItem(updateLayerOrders)
+                    legend.removeItem(updateLayerRoads)
+
+                    mxd.saveACopy(os.path.join("Atlasses", "Copy.mxd"))
+
+                    PDF = os.path.join("Atlasses", "{}\\Map_Dist{}_Base{}_Day{}.pdf".format(dist, dist, baseName, d))
+                    arcpy.mapping.ExportToPDF(mxd, PDF, "PAGE_LAYOUT", resolution=75, df_export_width=1100,
+                                              df_export_height=800)
+
+                    print("Dist{}_Base{}{}_Day{}.pdf".format(dist, bb, b, d))
+
+                    arcpy.mapping.UpdateLayer(df, updateLayerRoads, sourceLayerRoads, symbology_only=True)
+                    arcpy.mapping.RemoveLayer(df, newlayerRoads)
+                    arcpy.mapping.RemoveLayer(df, updateLayerRoads)
+                    arcpy.mapping.RemoveLayer(df, newlayerOrders)
+                    arcpy.mapping.RemoveLayer(df, updateLayerOrders)
+
+                except Exception as e:
+                    print(e)
+                    print("No Dist{}_Base{}{}_Day{}.pdf".format(dist, bb, b, d))
+                    pass
+    for filename in os.listdir(os.path.join("Atlasses", dist)):
+        with open(os.path.join("Atlasses", dist, filename), 'rb') as source:
+            tmp = PdfFileReader(source)
+            merger.append(tmp)
+
+    merger.write(os.path.join("Atlasses", "all_{}.pdf".format(dist)))
+    merger = PdfFileMerger()
+
 today = date.today()
-file_path_frontpage = os.path.join(working_directory, 'FrontPage.pdf')
 
-try:
-    with open(file_path_frontpage, 'rb') as source:
+with open(os.path.join("Atlasses", "FrontPage.pdf"), 'rb') as source:
+    tmp = PdfFileReader(source)
+    merger.append(tmp)
+
+for dists in range(1, 12):
+    dist = districts["{}".format(dists)]
+    print(dist)
+
+    with open(os.path.join("Atlasses", "all_{}.pdf".format(dist)), 'rb') as source:
         tmp = PdfFileReader(source)
         merger.append(tmp)
-except FileNotFoundError:
-    print(f"FrontPage.pdf not found: {file_path_frontpage}")
 
-for dists in range(1, 12):
-    dist = districts.get(str(dists))
-    if dist:
-        pdf_path_district = os.path.join(atlasses_directory, f"all_{dist}.pdf")
-        try:
-            with open(pdf_path_district, 'rb') as source:
-                tmp = PdfFileReader(source)
-                merger.append(tmp)
-        except FileNotFoundError:
-            print(f"File not found: {pdf_path_district}")
+merger.write(os.path.join("Atlasses", "Atlas_allDistricts_{}.pdf".format(today.strftime("%d%m%Y"))))
+merger = PdfFileMerger()
 
-merger.write(os.path.join(working_directory, f"Atlas_allDistricts_{today.strftime('%d%m%Y')}.pdf"))
-
-# Close the final merger to release the file handles
-merger.close()
+del mxd
