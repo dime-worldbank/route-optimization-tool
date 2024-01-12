@@ -48,8 +48,8 @@ districts = {
     "9": "Monapo",
     "10": "Mossuril",
     "11": "Mogincual",
-    "97": "Gurue",
-    "98": "aroundNampula"
+    #"97": "Gurue",
+    #"98": "aroundNampula"
 }
 
 for dists in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 98]:
@@ -205,7 +205,8 @@ for dists in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 98]:
 
                     mxd.saveACopy(os.path.join("Atlasses", "Copy.mxd"))
 
-                    PDF = os.path.join("Atlasses", "{}\\Map_Dist{}_Base{}_Day{}.pdf".format(dist, dist, baseName, d))
+                    #PDF = os.path.join("Atlasses", "{}\\Map_Dist{}_Base{}_Day{}.pdf".format(dist, dist, baseName, d))
+                    PDF = os.path.join("Atlasses", "{}_Map_Dist{}_Base{}_Day{}.pdf".format(dist, dist, baseName, d))
                     arcpy.mapping.ExportToPDF(mxd, PDF, "PAGE_LAYOUT", resolution=75, df_export_width=1100,
                                               df_export_height=800)
 

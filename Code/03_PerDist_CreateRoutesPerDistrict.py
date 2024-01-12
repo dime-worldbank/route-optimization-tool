@@ -57,6 +57,8 @@ def addRanks(table, sort_fields, category_field, rank_field='RANK'):
             row[1] = i
             cur.updateRow(row)
 
+
+
 def generateGPX(Inp_listforMerge,Inp_path,Inp_dist,Inp_base,Inp_d,Inp_StagePre, Inp_segType,Inp_count, Inp_subseq, Inp_listSegType,
                 Inp_listSegID,Inp_listSegBase,Inp_listSegBaseEnd, Inp_BaseName, Inp_BaseNameEnd, Inp_listSegEndLat,  Inp_listSegEndLon):
     listforMerge="\""+Inp_listforMerge[1:1000000]+"\""
@@ -64,6 +66,14 @@ def generateGPX(Inp_listforMerge,Inp_path,Inp_dist,Inp_base,Inp_d,Inp_StagePre, 
         Inp_Stage="0{}".format(Inp_StagePre)
     else:
         Inp_Stage="{}".format(Inp_StagePre)
+
+    output_subfolders = ["OutputVRP", "OutputVRP/base", "OutputVRP/day", "Temporary"]
+    for folder in output_subfolders:
+        folder_path = os.path.join(Inp_path, folder)
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path)
+
+
     arcpy.Merge_management(listforMerge, "{}/RoutesMerged_Dist{}_Base{}_Day{}_Stage{}".format(Inp_path,Inp_dist,Inp_BaseName,Inp_d,Inp_Stage))
 
     arcpy.CalculateField_management("{}/RoutesMerged_Dist{}_Base{}_Day{}_Stage{}".format(Inp_path,Inp_dist, Inp_BaseName,Inp_d,Inp_Stage),
@@ -184,26 +194,62 @@ def PerDist_function(Routes,Orders, nameAdd1, nameAdd2,count):
     arcpy.Select_analysis("{}/OrdersServiced_{}".format(path,dist), "{}/OrdersServicedSelect_{}".format(path,dist), " \"Sequence\" >  0")
     RouteValues = unique_values(r"{}/OrdersServicedSelect_{}".format(path,dist) , 'RouteName')
     print(RouteValues)
-    
-    listforMergePerDistrict=""
-    for base in range(1,count+1): # loop over all base locations in a district
+
+
+    listforMergePerDistrict = ""
+
+    for base in range(1, count + 1):
+        # Delete existing geodatabase if it exists
         try:
-            arcpy.Delete_management("Temporary/WorkingWithRoutes{}_dist{}_base{}.gdb".format(nameAdd1,dist, base))
-            print("Delete GDB")
+            arcpy.Delete_management("Temporary/WorkingWithRoutes{}_dist{}_base{}.gdb".format(nameAdd1, dist, base))
+            print("Deleted existing geodatabase")
         except:
             pass
-        # Process: Create File GDB
-        arcpy.CreateFileGDB_management("Temporary", "WorkingWithRoutes{}_dist{}_base{}.gdb".format(nameAdd1,dist, base))
-        print("Create GDB")
-        pathGDB="Temporary/WorkingWithRoutes{}_dist{}_base{}.gdb".format(nameAdd1,dist, base)
-        print("Base", base)
-        d=0
+
+        # Create a new file geodatabase
+        arcpy.CreateFileGDB_management("Temporary", "WorkingWithRoutes{}_dist{}_base{}.gdb".format(nameAdd1, dist, base))
+        print("Created new geodatabase")
+
+        # Set the path to the newly created geodatabase
+        pathGDB = "Temporary/WorkingWithRoutes{}_dist{}_base{}.gdb".format(nameAdd1, dist, base)
+        print("Base:", base)
+
+        # Remove existing output folder if it exists
         try:
-            shutil.rmtree("OutputVRP/{}/Base{}{}".format(dist,nameAdd2, base))
+            shutil.rmtree("OutputVRP/{}/Base{}{}".format(dist, nameAdd2, base))
+            print("Deleted existing output folder")
         except:
             print("Folder Base{} could not be deleted".format(base))
-            pass
-        os.mkdir("OutputVRP/{}/Base{}{}".format(dist,nameAdd2,base))
+
+        # Create a new output folder (or ensure it exists)
+        os.mkdir(os.path.join("OutputVRP", str(dist), "Base{}{}".format(nameAdd2, base)), exist_ok=True)
+
+        for base in range(1, count + 1):
+            # Delete existing geodatabase if it exists
+            try:
+                arcpy.Delete_management("Temporary/WorkingWithRoutes{}_dist{}_base{}.gdb".format(nameAdd1, dist, base))
+                print("Deleted existing geodatabase")
+            except:
+                pass
+
+            # Create a new file geodatabase
+            arcpy.CreateFileGDB_management("Temporary", "WorkingWithRoutes{}_dist{}_base{}.gdb".format(nameAdd1, dist, base))
+            print("Created new geodatabase")
+
+            # Set the path to the newly created geodatabase
+            path_gdb = "Temporary/WorkingWithRoutes{}_dist{}_base{}.gdb".format(nameAdd1, dist, base)
+            print("Base:", base)
+
+            # Remove existing output folder if it exists
+            try:
+                shutil.rmtree("OutputVRP/{}/Base{}{}".format(dist, nameAdd2, base))
+                print("Deleted existing output folder")
+            except:
+                print("Folder Base{} could not be deleted".format(base))
+
+            # Create a new output folder (or ensure it exists)
+            os.mkdir(os.path.join("OutputVRP", str(dist), "Base{}{}".format(nameAdd2, base)), exist_ok=True)
+
 
         for day in range(1,27): # loop over all possible days
             print("try now day {}".format(day))
@@ -256,7 +302,9 @@ def PerDist_function(Routes,Orders, nameAdd1, nameAdd2,count):
                 except:
                     print("Folder Day{} could not be deleted".format(d))
                     pass
-                os.mkdir("OutputVRP/{}/Base{}{}/Day{}".format(dist,nameAdd2,base,d))
+                #os.mkdir("OutputVRP/{}/Base{}{}/Day{}".format(dist,nameAdd2,base,d))
+                os.makedirs(os.path.join("OutputVRP", str(dist), "Base{}{}".format(nameAdd2, base), "Day{}".format(d)), exist_ok=True)
+
 
                 arcpy.Select_analysis("{}/OrdersServicedSelect_{}".format(path,dist), "{}/OrdersServicedSelect_{}_Base{}_Day{}".format(pathGDB,dist,BaseName,d), " \"RouteName\" =  'Route{}{}_{}'".format(nameAdd1,base,day))
                 arcpy.CopyFeatures_management("{}/OrdersServicedSelect_{}_Base{}_Day{}".format(pathGDB,dist,BaseName,d), "OutputVRP/{}/Base{}{}/Day{}/Orders_Dist{}_Base{}_Day{}.shp".format(dist,nameAdd2,base,d,dist,BaseName,d), "", "0", "0", "0")
@@ -616,7 +664,7 @@ roadsNetwork_shp = "Output/createRouteDistrict/network/roadsNetwork.shp"
 roadsNetworkDissolve_shp = "Output/createRouteDistrict/network/roadsNetworkDissolve.shp"
 roadsNetworkParts_shp = "Output/createRouteDistrict/network/roadsNetworkParts.shp"
 #network = "/Output/createRouteDistrict/network/roadsNetwork_ND.nd"
-network = "Output/createRouteDistrict/network/network.gdb/roadsNetwork/roads_NetD/roads_NetD.nd"
+network = "Output/createRouteDistrict/network/network.gdb/roadsNetwork/roads_NetD/roads_NetD"
 roadIntersectionsAndEndPoints="Output/createRouteDistrict/network/roadIntersectionsAndEndPoints.shp"
 roadsNetworkPartsCentroids="Output/createRouteDistrict/network/roadsNetworkPartsCentroids.shp"
 allInterceptPoints="Output/createRouteDistrict/network/allInterceptPoints.shp"
@@ -637,13 +685,40 @@ try:  # first solve transfer routes (manually defined for transferring from base
     os.mkdir("OutputVRP/{}".format(dist))
 
     # prepare input for VRP
-    arcpy.Select_analysis(distBoundariesUpdated, "{}/distBoundary_{}".format(path, dist), "\"ADM2_PT\"= '{}'".format(dist))
-    arcpy.SimplifyPolygon_cartography("{}/distBoundary_{}".format(path, dist), "{}/distBoundarySimple_{}".format(path, dist),
-                                      "POINT_REMOVE", "100 Meters", "0 SquareMeters", "RESOLVE_ERRORS", "KEEP_COLLAPSED_POINTS", "")
-    arcpy.Select_analysis("{}/startPoints_surveyProjected".format(path), "{}/startPoints_{}".format(path, dist), "\"district\" ='{}'".format(dist))
-    result = arcpy.GetCount_management("{}/startPoints_{}".format(path, dist))
+    #arcpy.Select_analysis(distBoundariesUpdated, "{}/distBoundary_{}".format(path, dist), "\"ADM2_PT\"= '{}'".format(dist))
+    ##arcpy.SimplifyPolygon_cartography("{}/distBoundary_{}".format(path, dist), "{}/distBoundarySimple_{}".format(path, dist),
+     #                                 "POINT_REMOVE", "100 Meters", "0 SquareMeters", "RESOLVE_ERRORS", "KEEP_COLLAPSED_POINTS", "")
+   # arcpy.Select_analysis("{}/startPoints_surveyProjected".format(path), "{}/startPoints_{}".format(path, dist), "\"district\" ='{}'".format(dist))
+   # result = arcpy.GetCount_management("{}/startPoints_{}".format(path, dist))
+  #  count = int(result.getOutput(0))
+
+# Select features from distBoundariesUpdated based on ADM2_PT
+    dist_boundaries_input = distBoundariesUpdated
+    dist_boundaries_output = "{}/distBoundary_{}".format(path, dist)
+    arcpy.Select_analysis(dist_boundaries_input, dist_boundaries_output, "\"ADM2_PT\"= '{}'".format(dist))
+
+    # Simplify the geometry of distBoundary features
+    dist_boundary_simple_output = "{}/distBoundarySimple_{}".format(path, dist)
+    arcpy.cartography.SimplifyPolygon(dist_boundaries_output, dist_boundary_simple_output,
+                                                  "POINT_REMOVE", "100 Meters", "0 SquareMeters",
+                                                  "RESOLVE_ERRORS", "KEEP_COLLAPSED_POINTS", "")
+
+    # Select features from startPoints_surveyProjected based on district
+    start_points_input = "{}/startPoints_surveyProjected".format(path)
+    start_points_output = "{}/startPoints_{}".format(path, dist)
+    arcpy.Select_analysis(start_points_input, start_points_output, "\"district\" ='{}'".format(dist))
+
+    # Get the count of selected features in startPoints
+    result = arcpy.GetCount_management(start_points_output)
     count = int(result.getOutput(0))
+
+    print("Selected features count for district {}: {}".format(dist, count))
+
+
+
+
     print("This many start points: {}".format(count))
+
     arcpy.Intersect_analysis("{} #;{} #".format(TandCRoads,"{}/distBoundarySimple_{}".format(path, dist)), "{}/TandCRoads_{}".format(path, dist), "ALL", "", "INPUT")
     arcpy.CreateRandomPoints_management(path, "VisitPointsRoadsPreNear_{}".format(dist), "{}/TandCRoads_{}".format(path, dist), "0 0 250 250", "100000", "2000 Meters", "POINT", "0")
     arcpy.Near_analysis("{}/VisitPointsRoadsPreNear_{}".format(path, dist), "{}/mktsAndFeiras".format(path), "500 Meters", "", "NO_ANGLE", "GEODESIC")

@@ -92,7 +92,7 @@ roadsNetworkDissolve_shp = "Output/createRouteDistrict/network/roadsNetworkDisso
 
 roadsNetworkParts_shp = os.path.join(os.path.dirname(__file__), "..", "Output", "createRouteDistrict", "network", "roadsNetworkParts.shp")
 
-network = "Output/createRouteDistrict/network/network.gdb/roadsNetwork/roadsNetwork_ND"
+network = "Output/createRouteDistrict/network/roadsNetwork_ND.nd"
 roadIntersectionsAndEndPoints="Output/createRouteDistrict/network/roadIntersectionsAndEndPoints.shp"
 roadsNetworkPartsCentroids="Output/createRouteDistrict/network/roadsNetworkPartsCentroids.shp"
 allInterceptPoints="Output/createRouteDistrict/network/allInterceptPoints.shp"
