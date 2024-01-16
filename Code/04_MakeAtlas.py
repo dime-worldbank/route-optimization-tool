@@ -52,7 +52,7 @@ districts = {
     #"98": "aroundNampula"
 }
 
-for dists in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 98]:
+for dists in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]:
     dist = districts["{}".format(dists)]
     try:
         shutil.rmtree(os.path.join("Atlasses", dist))

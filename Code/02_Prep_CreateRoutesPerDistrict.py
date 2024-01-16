@@ -44,8 +44,8 @@ arcpy.env.parallelProcessingFactor = "100%"
 
 #work_dir = os.path.dirname(os.path.realpath(__file__))
 #os.chdir(os.path.dirname(os.getcwd()))
-arcpy.env.scratchWorkspace = '/scratch'
-Scratch='/scratch'
+arcpy.env.scratchWorkspace = 'scratch'
+Scratch='scratch'
 
 print(os.getcwd())
 
@@ -69,45 +69,45 @@ par_timeAtHalfway=3
 # Inputs #
 ##########
 # roads and districts
-distBoundaries = "Input/moz_adm_20190607_shp/moz_admbnda_adm2_ine_20190607.shp"
-roads_in_nampula_and_zambezia = "Input/roads_in_nampula_and_zambezia_exclMemba.shp"
-startPoints_survey = "Input/startPoints_survey.shp"
+distBoundaries = "../Input/moz_adm_20190607_shp/moz_admbnda_adm2_ine_20190607.shp"
+roads_in_nampula_and_zambezia = "../Input/roads_in_nampula_and_zambezia_exclMemba.shp"
+startPoints_survey = "../Input/startPoints_survey.shp"
 
 # points of interest
-LCCkpts = "Input/pointsForLCCkpts_4thRound.shp"
-mktsFor2ndRound = "Input/marketsCleanedFor2ndRound.shp"
-feirasFor2ndRound = "Input/feirasCleanedFor4thRound.shp"
-allInfo_crossingLevel ="Input/allInfo_crossingLevel.shp"
-TandCRoads = "Input/TandCRoads.shp"
+LCCkpts = "../Input/pointsForLCCkpts_4thRound.shp"
+mktsFor2ndRound = "../Input/marketsCleanedFor2ndRound.shp"
+feirasFor2ndRound = "../Input/feirasCleanedFor4thRound.shp"
+allInfo_crossingLevel ="../Input/allInfo_crossingLevel.shp"
+TandCRoads = "../Input/TandCRoads.shp"
 #for route solver
-Routes = "Input/testRoute.csv"
-Breaks = "Input/testBreak.csv"
+Routes = "../Input/testRoute.csv"
+Breaks = "../Input/testBreak.csv"
 
 ###########
 # Outputs #
 ###########
-roadsNetwork_shp = "Output/createRouteDistrict/network/roadsNetwork.shp"
-roadsNetworkDissolve_shp = "Output/createRouteDistrict/network/roadsNetworkDissolve.shp"
+roadsNetwork_shp = "../Output/createRouteDistrict/network/roadsNetwork.shp"
+roadsNetworkDissolve_shp = "../Output/createRouteDistrict/network/roadsNetworkDissolve.shp"
 #roadsNetworkParts_shp = "Output/createRouteDistrict/network/roadsNetworkParts.shp"
 
 roadsNetworkParts_shp = os.path.join(os.path.dirname(__file__), "..", "Output", "createRouteDistrict", "network", "roadsNetworkParts.shp")
 
-network = "Output/createRouteDistrict/network/roadsNetwork_ND.nd"
-roadIntersectionsAndEndPoints="Output/createRouteDistrict/network/roadIntersectionsAndEndPoints.shp"
-roadsNetworkPartsCentroids="Output/createRouteDistrict/network/roadsNetworkPartsCentroids.shp"
-allInterceptPoints="Output/createRouteDistrict/network/allInterceptPoints.shp"
-distBoundariesUpdated = "Output/createRouteDistrict/network/distBoundariesUpdated.shp"
+network = "../Output/createRouteDistrict/network/roadsNetwork_ND.nd"
+roadIntersectionsAndEndPoints="../Output/createRouteDistrict/network/roadIntersectionsAndEndPoints.shp"
+roadsNetworkPartsCentroids="../Output/createRouteDistrict/network/roadsNetworkPartsCentroids.shp"
+allInterceptPoints="../Output/createRouteDistrict/network/allInterceptPoints.shp"
+distBoundariesUpdated = "../Output/createRouteDistrict/network/distBoundariesUpdated.shp"
 
 try:
     try:
-        arcpy.Delete_management("Temporary/WorkingWithRoutes4thRound.gdb")
+        arcpy.Delete_management("../Temporary/WorkingWithRoutes4thRound.gdb")
         print("Delete GDB")
     except:
         pass
     # Process: Create File GDB
-    arcpy.CreateFileGDB_management("Temporary", "WorkingWithRoutes4thRound")
+    arcpy.CreateFileGDB_management("../Temporary", "WorkingWithRoutes4thRound")
     print("Create GDB")
-    path="Temporary/WorkingWithRoutes4thRound.gdb"
+    path="../Temporary/WorkingWithRoutes4thRound.gdb"
 
     # Select Chinde and Luabo features
     arcpy.Select_analysis(distBoundaries, f"{path}/distBoundary_Chinde", '"ADM2_PT" = \'Chinde\'')
@@ -129,11 +129,23 @@ try:
     print("finishMerge")
 
     # GENERATE ROAD NETWORK DATASET #
-    arcpy.Project_management(roads_in_nampula_and_zambezia, "{}/roadsMergedProjected".format(path), "PROJCS['WGS_1984_UTM_Zone_36S',GEOGCS['GCS_WGS_1984',DATUM['D_WGS_1984',SPHEROID['WGS_1984',6378137.0,298.257223563]],PRIMEM['Greenwich',0.0],UNIT['Degree',0.0174532925199433]],PROJECTION['Transverse_Mercator'],PARAMETER['False_Easting',500000.0],PARAMETER['False_Northing',10000000.0],PARAMETER['Central_Meridian',33.0],PARAMETER['Scale_Factor',0.9996],PARAMETER['Latitude_Of_Origin',0.0],UNIT['Meter',1.0]]", "", "GEOGCS['GCS_WGS_1984',DATUM['D_WGS_1984',SPHEROID['WGS_1984',6378137.0,298.257223563]],PRIMEM['Greenwich',0.0],UNIT['Degree',0.0174532925199433]]", "NO_PRESERVE_SHAPE", "", "NO_VERTICAL")
-    arcpy.Select_analysis("{}/roadsMergedProjected".format(path), "{}/roadsMergedProjectedSelected".format(path), '"LINK_ID_NE" NOT IN (\'T07131\', \'T08553\')') # select only those markets within 1.5km from road
-    arcpy.CalculateField_management("{}/roadsMergedProjectedSelected".format(path), "KM", "!Shape_Length! / 1000", "PYTHON", "")
+   # arcpy.Project_management(roads_in_nampula_and_zambezia, "{}/roadsMergedProjected".format(path), "PROJCS['WGS_1984_UTM_Zone_36S',GEOGCS['GCS_WGS_1984',DATUM['D_WGS_1984',SPHEROID['WGS_1984',6378137.0,298.257223563]],PRIMEM['Greenwich',0.0],UNIT['Degree',0.0174532925199433]],PROJECTION['Transverse_Mercator'],PARAMETER['False_Easting',500000.0],PARAMETER['False_Northing',10000000.0],PARAMETER['Central_Meridian',33.0],PARAMETER['Scale_Factor',0.9996],PARAMETER['Latitude_Of_Origin',0.0],UNIT['Meter',1.0]]", "", "GEOGCS['GCS_WGS_1984',DATUM['D_WGS_1984',SPHEROID['WGS_1984',6378137.0,298.257223563]],PRIMEM['Greenwich',0.0],UNIT['Degree',0.0174532925199433]]", "NO_PRESERVE_SHAPE", "", "NO_VERTICAL")
+    #arcpy.Select_analysis("{}/roadsMergedProjected".format(path), "{}/roadsMergedProjectedSelected".format(path), '"LINK_ID_NE" NOT IN (\'T07131\', \'T08553\')') # select only those markets within 1.5km from road
+    #arcpy.CalculateField_management("{}/roadsMergedProjectedSelected".format(path), "KM", "!Shape_Length! / 1000", "PYTHON", "")
    
-
+   ####
+    arcpy.Merge_management("{};{}".format(roads_in_nampula_and_zambezia,TandCRoads), "{}\\roadsMerged".format(path))
+    #arcpy.Merge_management("{};{};{}".format(roads_in_nampula_and_zambezia,TandCRoads), "{}\\roadsMerged".format(path))
+    arcpy.ExtendLine_edit("{}\\roadsMerged".format(path), "500 Meters", "EXTENSION")
+    arcpy.Integrate_management("{} #".format("{}\\roadsMerged".format(path)), "50 Meters")
+    print("Integrated")
+    arcpy.Project_management("{}\\roadsMerged".format(path), "{}\\roadsMergedProjected".format(path), "PROJCS['WGS_1984_UTM_Zone_36S',GEOGCS['GCS_WGS_1984',DATUM['D_WGS_1984',SPHEROID['WGS_1984',6378137.0,298.257223563]],PRIMEM['Greenwich',0.0],UNIT['Degree',0.0174532925199433]],PROJECTION['Transverse_Mercator'],PARAMETER['False_Easting',500000.0],PARAMETER['False_Northing',10000000.0],PARAMETER['Central_Meridian',33.0],PARAMETER['Scale_Factor',0.9996],PARAMETER['Latitude_Of_Origin',0.0],UNIT['Meter',1.0]]", "", "GEOGCS['GCS_WGS_1984',DATUM['D_WGS_1984',SPHEROID['WGS_1984',6378137.0,298.257223563]],PRIMEM['Greenwich',0.0],UNIT['Degree',0.0174532925199433]]", "NO_PRESERVE_SHAPE", "", "NO_VERTICAL")
+    arcpy.Select_analysis("{}\\roadsMergedProjected".format(path), "{}\\roadsMergedProjectedSelected".format(path), "\"LINK_ID_NE\" NOT IN ('T07131','T08553')") # select only those markets within 1.5km from road
+    #arcpy.CalculateField_management("{}\\roadsMergedProjectedSelected".format(path), "KM", "[Shape_Length]/1000", "PYTHON", "")
+    
+    arcpy.CalculateField_management("{}/roadsMergedProjectedSelected".format(path), "KM", "!Shape_Length! / 1000", "PYTHON", "")
+    arcpy.CopyFeatures_management("{}\\roadsMergedProjectedSelected".format(path), roadsNetwork_shp, "", "0", "0", "0")
+    arcpy.AddField_management(roadsNetwork_shp, "Speed4Rout", "DOUBLE", "", "", "", "", "NULLABLE", "NON_REQUIRED", "")
 
 
 
@@ -232,7 +244,7 @@ try:
 
     # Merge the feature classes
     arcpy.Merge_management(feature_classes_to_merge, all_intercept_points_path)
-    arcpy.Integrate_management("Output/createRouteDistrict/network/allInterceptPoints.shp", "500 Meters")
+    arcpy.Integrate_management("../Output/createRouteDistrict/network/allInterceptPoints.shp", "500 Meters")
 
   
     arcpy.DeleteIdentical_management(allInterceptPoints, "Shape", "50 Meters")
