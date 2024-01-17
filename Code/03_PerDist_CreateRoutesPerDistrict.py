@@ -216,35 +216,164 @@ def PerDist_function(Routes,Orders, nameAdd1, nameAdd2,count):
     breaks.load(Breaks)
     print("load breaks")
 
-    result=arcpy.na.SolveVehicleRoutingProblem(orders, depots, routes, breaks , "Minutes", "Kilometers", network, "{}".format(path), default_date="2019/10/01", save_output_layer="SAVE_OUTPUT_LAYER", populate_route_lines="ROUTE_LINES")
-    arcpy.TableToTable_conversion("{}/Stops".format(path), "OutputVRP", "Stops_{}.csv".format(dist))
-    arcpy.TableToTable_conversion("{}/UnassignedStops".format(path), "OutputVRP", "UnassignedStops_{}.csv".format(dist))
+    #outGeodatabase = "C:/Users/idels/Documents/github/route-optimization-tool/Temporary/WorkingWithRoutes4thRound.gdb"
 
-    solveSucceeded = result.getOutput(0)
-    print("Solve Succeeded: {0}".format(solveSucceeded))
-    print("Messages from solver are printed below.")
-    print(result.getMessages(1))
-    print(result)
+    #result=arcpy.na.SolveVehicleRoutingProblem(orders, depots, routes, breaks , "Minutes", "Kilometers", network, outGeodatabase,
+                                             #   default_date="2019/10/01", save_output_layer="SAVE_OUTPUT_LAYER", populate_route_lines="ROUTE_LINES")
+    #arcpy.TableToTable_conversion("{}/Stops".format(path), "OutputVRP", "Stops_{}.csv".format(dist))
+    #arcpy.TableToTable_conversion("{}/UnassignedStops".format(path), "OutputVRP", "UnassignedStops_{}.csv".format(dist))
     
+    #solveSucceeded = result.getOutput(0)
+    #print("Solve Succeeded: {0}".format(solveSucceeded))
+    #print("Messages from solver are printed below.")
+    #print(result.getMessages(1))
+    #print(result)
+
     try:
-        # Get the solved layer file from the result object
-        vrp_layer = result.getOutput(1)
+        # Check out the Network Analyst license if available.
+        # Fail if the Network Analyst
+        # license is not available.
+        if arcpy.CheckExtension("network") == "Available":
+            arcpy.CheckOutExtension("network")
+        else:
+            raise arcpy.ExecuteError("Network Analyst Extension license is not available.")
 
-        # Convert VRP output into routes
-        vrp_lyr_obj = arcpy.mp.LayerFile(vrp_layer)
+        # Set environment settings
+        output_dir = Scratch
+        # The NA layer's data will be saved to the workspace specified here
+        arcpy.env.workspace = os.path.join(output_dir, "Output.gdb")
+        arcpy.env.overwriteOutput = True
 
-        vrp_orders_lyr = vrp_lyr_obj.listLayers('Orders')[0]
-        vrp_depots_lyr = vrp_lyr_obj.listLayers('Depots')[0]
-        vrp_routes_lyr = vrp_lyr_obj.listLayers('Routes')[0]
+        # Get all travel modes from the network dataset
+        travel_modes = arcpy.na.GetTravelModes(network)
+        # Print the travel modes
+        print("Available Travel Modes:")
+        for travel_mode in travel_modes:
+            print(travel_mode)
 
-        arcpy.CopyFeatures_management(vrp_orders_lyr, "{}\\OrdersAll_{}".format(path, dist))
-        arcpy.CopyFeatures_management(vrp_depots_lyr, "{}\\DepotsAll_{}".format(path, dist))
-        arcpy.CopyFeatures_management(vrp_routes_lyr, "{}\\RoutesAll_{}".format(path, dist))
 
-        arcpy.Select_analysis("{}\\OrdersAll_{}".format(path, dist), "{}\\OrdersServiced_{}".format(path, dist), "\"FromPrevTravelTime\" >  0")
-        arcpy.Select_analysis("{}\\OrdersServiced_{}".format(path, dist), "{}\\OrdersServicedSelect_{}".format(path, dist), "\"Sequence\" >  0")
-        RouteValues = unique_values("{}\\OrdersServicedSelect_{}".format(path, dist), 'RouteName')
-        #print(RouteValues)
+   # Set local variables
+        layer_name = "SurveyRoute"
+        travel_mode = "New Travel Mode"
+        time_units = "minutes"
+        distance_units = "kilometers"
+        in_orders = orders
+        in_depots = depots
+        in_routes = routes
+        output_layer_file = os.path.join(output_dir, layer_name + ".lyrx")
+
+        # Create a new Vehicle Routing Problem (VRP) layer.
+        result_object = arcpy.na.MakeVehicleRoutingProblemAnalysisLayer(network, layer_name, travel_mode,time_units,distance_units,line_shape="ALONG_NETWORK")
+        # Check if the analysis layer was created successfully
+        if result_object:
+            print("VRP Analysis Layer created successfully.")
+            
+            # Get the layer object from the result object
+            layer_object = result_object.getOutput(0)
+            
+            # You can now work with the layer_object, for example, to add orders, depots, etc.
+            # For demonstration purposes, printing the layer's name
+            print("Layer Name:", layer_object.name)
+        else:
+            print("Failed to create VRP Analysis Layer. Check the result object for more details.")
+            print(result_object.getMessages())
+
+        # Get the layer object form the result object. The route layer can now be
+        # referenced using the layer object.
+        layer_object = result_object.getOutput(0)
+
+        # Get the names of all the sublayers within the VRP layer.
+        sub_layer_names = arcpy.na.GetNAClassNames(layer_object)
+        # Store the layer names that we will use later
+        orders_layer_name = sub_layer_names["Orders"]
+        depots_layer_name = sub_layer_names["Depots"]
+        routes_layer_name = sub_layer_names["Routes"]
+
+        # Load the store locations as orders. Using field mappings we map the
+        # TimeWindowStart1, TimeWindowEnd1, and DeliveryQuantities properties
+        # for Orders from the fields of store features and assign a value of
+        # 0 to MaxViolationTime1 property. The Name and ServiceTime properties
+        # have the correct mapped field names when using the candidate fields
+        # from store locations feature class.
+        candidate_fields = arcpy.ListFields(in_orders)
+        order_field_mappings = arcpy.na.NAClassFieldMappings(layer_object, orders_layer_name, False, candidate_fields)
+        order_field_mappings["TimeWindowStart"].mappedFieldName = "TimeStart1"
+        order_field_mappings["TimeWindowEnd"].mappedFieldName = "TimeEnd1"
+        order_field_mappings["DeliveryQuantity_1"].mappedFieldName = "Demand"
+        order_field_mappings["MaxViolationTime"].defaultValue = 0
+        arcpy.na.AddLocations(layer_object, orders_layer_name, in_orders, order_field_mappings, "")
+
+        # Load the depots from the distribution center features. Using field mappings
+        # we map the Name properties for Depots from the fields of distribution
+        # center features and assign a value of 8 AM for TimeWindowStart1 and a
+        # value of 5 PM for TimeWindowEnd1 properties
+        depot_field_mappings = arcpy.na.NAClassFieldMappings(layer_object, depots_layer_name)
+        depot_field_mappings["Name"].mappedFieldName = "Name"
+        depot_field_mappings["TimeWindowStart"].defaultValue = "8 AM"
+        depot_field_mappings["TimeWindowEnd"].defaultValue = "5 PM"
+        arcpy.na.AddLocations(layer_object, depots_layer_name, in_depots, depot_field_mappings, "")
+
+        # Load the routes from a table containing information about routes. In this
+        # case, since the fields on the routes table and property names for Routes
+        # are the same, we will just use the default field mappings
+        routes_field_mappings = arcpy.na.NAClassFieldMappings(layer_object, routes_layer_name)
+        routes_field_mappings["Name"].mappedFieldName = "Name"
+        routes_field_mappings["StartDepotName"].mappedFieldName = "StartDepotName"
+        routes_field_mappings["EndDepotName"].mappedFieldName = "EndDepotName"
+        routes_field_mappings["StartDepotServiceTime"].mappedFieldName = "StartDepotServiceTime"
+        routes_field_mappings["Capacity_1"].mappedFieldName = "Capacities"
+        routes_field_mappings["CostPerUnitTime"].mappedFieldName = "CostPerUnitTime"
+        routes_field_mappings["CostPerUnitDistance"].mappedFieldName = "CostPerUnitDistance"
+        routes_field_mappings["MaxOrderCount"].mappedFieldName = "MaxOrderCount"
+        routes_field_mappings["MaxTotalTime"].mappedFieldName = "MaxTotalTime"
+        routes_field_mappings["MaxTotalTravelTime"].mappedFieldName = "MaxTotalTravelTime"
+        routes_field_mappings["MaxTotalDistance"].mappedFieldName = "MaxTotalDistance"
+        arcpy.na.AddLocations(layer_object, routes_layer_name, in_routes, routes_field_mappings, "")
+
+        # Solve the VRP layer
+        # Assuming you have already created the VRP analysis layer using MakeVehicleRoutingProblemAnalysisLayer
+        #result_object = arcpy.na.Solve(layer_object, ignore_invalids="SKIP")
+
+        # Check if the solve operation was successful
+        #if result_object.solveSucceeded:
+        #    print("Solve operation successful.")
+       # else:
+          #  print("Solve operation failed. Check the result object for more details.")
+           # print(result_object.getMessages())
+
+
+        # Save the solved VRP layer as a layer file on disk with relative paths
+        arcpy.management.SaveToLayerFile(layer_object, output_layer_file, "RELATIVE")
+
+        print("Script Completed Successfully")
+
+    except Exception as e:
+        # If an error occurred, print line number and error message
+        import traceback
+        import sys
+        tb = sys.exc_info()[2]
+        print("An error occurred on line %i" % tb.tb_lineno)
+        print(str(e))
+
+    try:
+            # Get the solved layer file from the result object
+            vrp_layer = result_object.getOutput(1)
+
+            # Convert VRP output into routes
+            vrp_lyr_obj = arcpy.mp.LayerFile(vrp_layer)
+
+            vrp_orders_lyr = vrp_lyr_obj.listLayers('Orders')[0]
+            vrp_depots_lyr = vrp_lyr_obj.listLayers('Depots')[0]
+            vrp_routes_lyr = vrp_lyr_obj.listLayers('Routes')[0]
+
+            arcpy.CopyFeatures_management(vrp_orders_lyr, "{}\\OrdersAll_{}".format(path, dist))
+            arcpy.CopyFeatures_management(vrp_depots_lyr, "{}\\DepotsAll_{}".format(path, dist))
+            arcpy.CopyFeatures_management(vrp_routes_lyr, "{}\\RoutesAll_{}".format(path, dist))
+
+            arcpy.Select_analysis("{}\\OrdersAll_{}".format(path, dist), "{}\\OrdersServiced_{}".format(path, dist), "\"FromPrevTravelTime\" >  0")
+            arcpy.Select_analysis("{}\\OrdersServiced_{}".format(path, dist), "{}\\OrdersServicedSelect_{}".format(path, dist), "\"Sequence\" >  0")
+            RouteValues = unique_values("{}\\OrdersServicedSelect_{}".format(path, dist), 'RouteName')
+            print(RouteValues)
 
     except Exception as e:
         print("Error:", str(e))
@@ -253,6 +382,7 @@ def PerDist_function(Routes,Orders, nameAdd1, nameAdd2,count):
 
     # Initialize logging (adjust the filename, level, and format as needed)
     logging.basicConfig(filename='script.log', level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+
 
     listforMergePerDistrict = ""
 
@@ -665,11 +795,11 @@ work_dir = os.path.dirname(os.path.realpath(__file__))
 os.chdir(os.path.dirname(os.getcwd()))
 arcpy.env.scratchWorkspace = 'C:\\Users\\idels\Documents\\github\\route-optimization-tool\\Scratch'
 Scratch='C:\\Users\\idels\\Documents\\github\\route-optimization-tool\\Scratch'
-try:
-    shutil.rmtree(Scratch)
-except:
-    pass
-os.mkdir(Scratch)         
+#try:
+   # shutil.rmtree(Scratch)
+#except:
+ #   pass
+#os.mkdir(Scratch)         
 
 districts={
 "1": "ChindeLuabo",
@@ -716,7 +846,7 @@ roadsNetwork_shp = "Output/createRouteDistrict/network/roadsNetwork.shp"
 roadsNetworkDissolve_shp = "Output/createRouteDistrict/network/roadsNetworkDissolve.shp"
 roadsNetworkParts_shp = "Output/createRouteDistrict/network/roadsNetworkParts.shp"
 #network = "/Output/createRouteDistrict/network/roadsNetwork_ND.nd"
-network = "Output/createRouteDistrict/network/roadsNetwork.gdb/roadsNetwork_drive/roadsNetwork_drive_ND"
+network = "C:/Users/idels/Documents/github/route-optimization-tool/Output/createRouteDistrict/network/roadsDatasetNet.gdb/roads/roadNet"
 roadIntersectionsAndEndPoints="Output/createRouteDistrict/network/roadIntersectionsAndEndPoints.shp"
 roadsNetworkPartsCentroids="Output/createRouteDistrict/network/roadsNetworkPartsCentroids.shp"
 allInterceptPoints="Output/createRouteDistrict/network/allInterceptPoints.shp"
