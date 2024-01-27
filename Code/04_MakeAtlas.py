@@ -64,7 +64,7 @@ for dists in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]:
     print(dist)
 
     try:
-        arcpy.Delete_management("Atlasses\\WorkingGDB{}.gdb".format(dist))
+        arcpy.Delete_management("Atlasses/WorkingGDB{}.gdb".format(dist))
     except:
         pass
 
@@ -101,7 +101,7 @@ for dists in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]:
                     arcpy.CopyFeatures_management(
                         os.path.join(mainpath, dist, "Base{}{}".format(bb, b), "Day{}".format(d),
                                      "RoutesMerged_Dist{}_Base{}_Day{}.shp".format(dist, baseName, d)),
-                        "Atlasses\\WorkingGDB{}.gdb\\route{}{}_{}".format(dist, bb, b, d), "", "0", "0", "0")
+                        "Atlasses/WorkingGDB{}.gdb/route{}{}_{}".format(dist, bb, b, d), "", "0", "0", "0")
 
                     arcpy.AddGeometryAttributes_management(
                         os.path.join(mainpath, dist, "Base{}{}".format(bb, b), "Day{}".format(d),
@@ -123,28 +123,28 @@ for dists in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]:
                                                   "", "0", "0", "0")
 
                     arcpy.Select_analysis(os.path.join(mainpath, dist, "Base{}{}".format(bb, b), "Day{}".format(d),
-                                                       "PointLayer"), "{}\\mktsCount.shp".format(mainpath),
+                                                       "PointLayer"), "{}/mktsCount.shp".format(mainpath),
                                           " \"StgType\" =  'Market'")
                     arcpy.Select_analysis(os.path.join(mainpath, dist, "Base{}{}".format(bb, b), "Day{}".format(d),
-                                                       "PointLayer"), "{}\\feiraCount.shp".format(mainpath),
+                                                       "PointLayer"), "{}/feiraCount.shp".format(mainpath),
                                           " \"StgType\" =  'Feira'")
                     arcpy.Select_analysis(os.path.join(mainpath, dist, "Base{}{}".format(bb, b), "Day{}".format(d),
-                                                       "PointLayer"), "{}\\crossCount.shp".format(mainpath),
+                                                       "PointLayer"), "{}/crossCount.shp".format(mainpath),
                                           " \"StgType\" =  'Crossing'")
                     arcpy.Select_analysis(os.path.join(mainpath, dist, "Base{}{}".format(bb, b), "Day{}".format(d),
-                                                       "PointLayer"), "{}\\LCCkptCount.shp".format(mainpath),
+                                                       "PointLayer"), "{}/LCCkptCount.shp".format(mainpath),
                                           " \"StgType\" =  'LCCkpt'")
 
-                    result = arcpy.GetCount_management("{}\\mktsCount.shp".format(mainpath))
+                    result = arcpy.GetCount_management("{}/mktsCount.shp".format(mainpath))
                     mkts = int(result.getOutput(0))
 
-                    result = arcpy.GetCount_management("{}\\feiraCount.shp".format(mainpath))
+                    result = arcpy.GetCount_management("{}/feiraCount.shp".format(mainpath))
                     feiras = int(result.getOutput(0))
 
-                    result = arcpy.GetCount_management("{}\\crossCount.shp".format(mainpath))
+                    result = arcpy.GetCount_management("{}/crossCount.shp".format(mainpath))
                     cross = int(result.getOutput(0))
 
-                    result = arcpy.GetCount_management("{}\\LCCkptCount.shp".format(mainpath))
+                    result = arcpy.GetCount_management("{}/LCCkptCount.shp".format(mainpath))
                     ckpts = int(result.getOutput(0))
 
                     result = arcpy.GetCount_management(
@@ -178,7 +178,7 @@ for dists in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]:
 
                     arcpy.mapping.UpdateLayer(df, updateLayerRoads, sourceLayerRoads, symbology_only=False)
 
-                    updateLayerRoads.replaceDataSource("Atlasses\\WorkingGDB{}.gdb".format(dist),
+                    updateLayerRoads.replaceDataSource("Atlasses/WorkingGDB{}.gdb".format(dist),
                                                        "FILEGDB_WORKSPACE", "route{}{}_{}".format(bb, b, d))
 
                     for lblClass in updateLayerRoads.labelClasses:
@@ -205,7 +205,7 @@ for dists in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]:
 
                     mxd.saveACopy(os.path.join("Atlasses", "Copy.mxd"))
 
-                    #PDF = os.path.join("Atlasses", "{}\\Map_Dist{}_Base{}_Day{}.pdf".format(dist, dist, baseName, d))
+                    #PDF = os.path.join("Atlasses", "{}/Map_Dist{}_Base{}_Day{}.pdf".format(dist, dist, baseName, d))
                     PDF = os.path.join("Atlasses", "{}_Map_Dist{}_Base{}_Day{}.pdf".format(dist, dist, baseName, d))
                     arcpy.mapping.ExportToPDF(mxd, PDF, "PAGE_LAYOUT", resolution=75, df_export_width=1100,
                                               df_export_height=800)

@@ -5,18 +5,19 @@ code_directory = os.path.join(os.path.dirname(__file__), "Code")
 os.chdir(code_directory)
 
 districts = {
-    "1": "ChindeLuabo",
-    "2": "Mocubela",
-    "3": "Maganja",
-    "4": "Morrumbala",
-    "5": "Lugela",
+  #''''''
+    #"1": "ChindeLuabo",
+    #"2": "Mocubela",
+    #"3": "Maganja",
+    #"4": "Morrumbala",
+    #"5": "Lugela",
     "6": "Pebane",
-    "7": "Memba",
-    "8": "Erati",
-    "9": "Monapo",
-    "10": "Mossuril",
-    "11": "Mogincual",
-    "98": "aroundNampula"
+    #"7": "Memba",
+    #"8": "Erati",
+    #"9": "Monapo",
+    #"10": "Mossuril",
+    #"11": "Mogincual",
+    #"98": "aroundNampula"
 }
 
 # CREATE ROUTES PER DISTRICT - PREPARATION
@@ -24,8 +25,8 @@ districts = {
 
 #CREATE ROUTES PER DISTRICT - MAIN
 for district_number, district_name in districts.items():
-    print(f"Start District {district_number}: {district_name}")
-    os.system(f"python 03_PerDist_CreateRoutesPerDistrict.py {district_number}")
+  print(f"Start District {district_number}: {district_name}")
+  os.system(f"python 03_PerDist_CreateRoutesPerDistrict.py {district_number}")
 
 # MAKE ATLAS
 #os.system("python 04_MakeAtlas.py")
